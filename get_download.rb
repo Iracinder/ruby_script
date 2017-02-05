@@ -4,11 +4,17 @@ require 'net/ssh'
 require 'net/scp'
 require 'optparse'
 require 'io/console'
+require_relative 'loading_bar'
 
 hostname = 'alkaid.thilp.net'
 username = 'roucool'
 extension = %w(*.mp4 *.mkv *.avi)
-terminal_width = IO.console.winsize[1]
+
+def longest(source)
+  arr = source.split
+  arr.sort! { |a, b| b.length <=> a.length }
+  arr[0].length
+end
 
 OptionParser.new { |opts|
   opts.banner = 'Usage: get_download.rb [options]'
@@ -25,10 +31,11 @@ Net::SSH.start(hostname, username) do |ssh|
   puts 'Connected'
   STDOUT.flush
   res = ssh.exec!(cmd)
+  longest_name = longest res
   res.each_line do |file|
+    bar = Loading_bar.new file.chomp, longest_name
     ssh.scp.download! file.chomp, 'D:/Users/vincen_p/Videos' do |ch, name, sent, total|
-      progress = 100 * sent / total
-      print "#{name}:" + ' ' * terminal_width - name.length - 50 +'[' + ('=' * (progress / 2)) + (' ' * (50 - (progress / 2))) + "] #{progress}%\r"
+      print bar.progress sent, total
       STDOUT.flush
     end
     p
