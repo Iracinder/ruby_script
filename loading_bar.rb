@@ -1,6 +1,7 @@
 require 'io/console'
 require 'terminal-size'
 
+
 class Loading_bar
   def initialize(name, longest=nil, bar_size=50)
     @name = name
@@ -13,9 +14,9 @@ class Loading_bar
   end
 
   def progress(sent, total)
-    progress = 100 * sent / total
+    progress = 100 * sent.to_f / total
     buffer = ' ' * (Terminal.size[:width] - 10 - @name.length - @bar_size)
-    bar = '[' + ('=' * (progress / 2)) + (' ' * (@bar_size - (progress / 2))) + "] #{progress.to_s.rjust(4)}%"
+    bar = '[' + ('=' * (progress / 2)) + (' ' * (@bar_size - (progress / 2))) + "] #{progress.to_i.to_s.rjust(4)}%"
     unless  @offset.nil?
       buffer = ' ' * @offset
     end
@@ -23,11 +24,12 @@ class Loading_bar
   end
 
   def eta(progress)
+    if progress == 0
+      return '-:-'
+    end
     time_spent = Time.now - @start
     time_end = 100 * time_spent / progress
     time_left = Time.at(time_end - time_spent)
     "#{time_left.min.to_s.rjust(2, '0')}:#{time_left.sec.to_s.rjust(2, '0')}"
   end
-
-
 end
