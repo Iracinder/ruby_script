@@ -9,6 +9,7 @@ require_relative 'loading_bar'
 hostname = 'alkaid.thilp.net'
 username = 'roucool'
 extension = %w(*.mp4 *.mkv *.avi)
+path = 'D:/Users/vincen_p/Videos'
 
 def longest(source)
   arr = source.split
@@ -19,6 +20,9 @@ end
 OptionParser.new { |opts|
   opts.banner = 'Usage: get_download.rb [options]'
   opts.on('-e', '--disable-extension-check', 'Disables extension check for files') do
+    extension = []
+  end
+  opts.on('-p', '--path', 'Destination folder') do
     extension = []
   end
 }.parse!
@@ -35,10 +39,10 @@ Net::SSH.start(hostname, username) do |ssh|
   res.each_line do |file|
     bar = Loading_bar.new file.chomp, longest_name
     ssh.scp.download! file.chomp, 'D:/Users/vincen_p/Videos' do |ch, name, sent, total|
-      print bar.progress sent, total
+      print "#{bar.progress sent, total}\r"
       STDOUT.flush
     end
-    p
+    puts
   end
   ssh.close
 end
