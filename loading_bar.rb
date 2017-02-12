@@ -3,6 +3,9 @@ require 'terminal-size'
 
 
 class Loading_bar
+  attr_reader :name
+  attr_reader :start
+  attr_reader :bar_size
   def initialize(name, longest=nil, bar_size=50)
     @name = name
     @offset = nil
