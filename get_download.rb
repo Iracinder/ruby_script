@@ -6,39 +6,57 @@ require 'optparse'
 require 'io/console'
 require_relative 'loading_bar'
 
-hostname = 'alkaid.thilp.net'
-username = 'roucool'
-extension = %w(*.mp4 *.mkv *.avi)
-path = 'D:/Users/vincen_p/Videos'
 
-def longest(source)
-  arr = source.split
-  arr.sort! { |a, b| b.length <=> a.length }
-  arr[0].length
+def parse_cmd_line
+  options = {}
+  options['config'] = '.env'
+  ext = %w(*.mp4 *.mkv *.avi)
+  options['extension'] = ext.map{|e| "-name '#{e}' -o "}.join
+  OptionParser.new { |opts|
+    opts.banner = 'Usage: get_download.rb [options]'
+    opts.on('-e', '--disable-extension-check', 'Disables extension check for files') do
+      options['extension'] = []
+    end
+    opts.on('-p', '--path PATH', 'Destination folder') do |p|
+      options['path'] = p
+    end
+    opts.on('-s', '--server-path PATH', 'path to deluge files') do |p|
+      options['server_path'] = p
+    end
+    opts.on('-c', '--config FILE', 'Allow to add config file') do |conf|
+      options['config'] = conf
+    end
+  }.parse!
+  options
 end
 
-OptionParser.new { |opts|
-  opts.banner = 'Usage: get_download.rb [options]'
-  opts.on('-e', '--disable-extension-check', 'Disables extension check for files') do
-    extension = []
+def load_env config_file
+  env = {}
+  begin
+    File.open(config_file, 'r') do |f|
+      f.each_line do |line|
+        env[line.split('=')[0].strip] = line.split('=')[-1].strip
+      end
+    end
+  rescue SystemCallError
+    $stderr.print "No config file found\n"
   end
-  opts.on('-p', '--path', 'Destination folder') do
-    extension = []
-  end
-}.parse!
-extension = extension.map{|e| "-name '#{e}' -o "}.join
-cmd = "find /srv/deluge/ #{extension.strip.chomp('-o')}| grep -Ei '#{ARGV * '|'}'"
+  env
+end
 
-puts 'Connecting to remote host ' + hostname
+options = parse_cmd_line
+env = load_env options['config']
+cmd = "find #{env['server_path']} #{options['extension'].strip.chomp('-o')}| grep -Ei '#{ARGV * '|'}'"
+puts 'Connecting to remote host ' + env['hostname'].to_s
 STDOUT.flush
-Net::SSH.start(hostname, username) do |ssh|
+Net::SSH.start(env['hostname'], env['username']) do |ssh|
   puts 'Connected'
   STDOUT.flush
   res = ssh.exec!(cmd)
-  longest_name = longest res
+  longest_name = res.split(/\n+/).max_by(&:length).length
   res.each_line do |file|
     bar = Loading_bar.new file.chomp, longest_name
-    ssh.scp.download! file.chomp, 'D:/Users/vincen_p/Videos' do |ch, name, sent, total|
+    ssh.scp.download! file.chomp, env['path'] do |ch, name, sent, total|
       print "#{bar.progress sent, total}\r"
       STDOUT.flush
     end
